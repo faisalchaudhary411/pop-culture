@@ -1,0 +1,13 @@
+{
+  "Movies": {
+    "Bollywood Hungama": "https://www.bollywoodhungama.com/feed",
+    "PakShowbiz": "https://www.pakshowbiz.com/feed"
+  },
+  "Drama": {
+    "PakShowbiz": "https://www.pakshowbiz.com/feed",
+    "ARY News Urdu": "https://urdu.arynews.tv/feed"
+  },
+  "Music": {
+    "PakShowbiz": "https://www.pakshowbiz.com/feed"
+  }
+}
