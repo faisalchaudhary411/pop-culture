@@ -51,6 +51,21 @@ open each once in a browser to confirm you get raw XML back, not a 404:
 If one is dead, swap it out in `feeds.json` — most sites expose a feed at
 `/feed` or `/rss.xml`, or search "[site name] RSS feed feedspot" to find one.
 
+## Design
+
+Built around a cinema/theater concept rather than a generic news-list look:
+- A marquee-style header (gold border with a dotted "lightbulb" edge)
+- A scrolling breaking-headlines ticker under the nav
+- A "Now Showing" hero section for the single latest story
+- Cards styled as torn ticket stubs, each with a color-coded genre stamp
+  (gold = Movies, rose = Drama, teal = Music) and a "تازہ" (fresh) badge
+  on anything published in the last 3 hours
+
+All of this is still plain HTML/CSS — no JS is required for any of it, so
+none of it costs you SEO or load time. The only animation (the ticker) also
+respects `prefers-reduced-motion` and its content exists as normal links
+either way, so nothing depends on JS running for a visitor or a crawler.
+
 ## Why this is better for SEO/speed than the Streamlit version
 
 - Streamlit ships a full Python-in-the-browser app shell before any content
