@@ -53,18 +53,27 @@ If one is dead, swap it out in `feeds.json` — most sites expose a feed at
 
 ## Design
 
-Built around a cinema/theater concept rather than a generic news-list look:
-- A marquee-style header (gold border with a dotted "lightbulb" edge)
-- A scrolling breaking-headlines ticker under the nav
-- A "Now Showing" hero section for the single latest story
-- Cards styled as torn ticket stubs, each with a color-coded genre stamp
-  (gold = Movies, rose = Drama, teal = Music) and a "تازہ" (fresh) badge
-  on anything published in the last 3 hours
+A glossy, image-forward "showbiz magazine" look, not a text-heavy news list:
 
-All of this is still plain HTML/CSS — no JS is required for any of it, so
-none of it costs you SEO or load time. The only animation (the ticker) also
-respects `prefers-reduced-motion` and its content exists as normal links
-either way, so nothing depends on JS running for a visitor or a crawler.
+- **Poster-tile grid** — every story is a big image tile (4:3), title
+  overlaid directly on the photo with a dark gradient scrim underneath it,
+  the way Netflix/streaming tiles or movie posters work. No summary
+  paragraph clutters the grid — just image, title, category chip, source,
+  and time.
+- **Fixed image extraction** — most Pakistani entertainment sites run on
+  WordPress and only embed their photo inside the article's full content
+  (`content:encoded`), not the `media:thumbnail` tag most RSS readers check.
+  `generate.py` now also scans `content:encoded` and the summary HTML for
+  the first `<img>` tag, so far more articles get a real photo.
+- **Vibrant fallback** — on the rare article with no image at all, the tile
+  fills with a bold category-colored gradient (pink for Movies, violet for
+  Drama, teal for Music) instead of going blank, so the grid never looks
+  empty or grey.
+- **"Now Showing" hero + 🔥 ٹرینڈنگ ribbon** for the latest story, and a
+  scrolling breaking-news ticker under the nav.
+
+Still zero JavaScript required for content — everything here is plain HTML
+background-images and CSS gradients, so none of it costs SEO or load time.
 
 ## Why this is better for SEO/speed than the Streamlit version
 
