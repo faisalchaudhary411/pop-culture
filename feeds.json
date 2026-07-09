@@ -5,7 +5,8 @@
   },
   "Drama": {
     "PakShowbiz": "https://www.pakshowbiz.com/feed",
-    "ARY News Urdu": "https://urdu.arynews.tv/feed"
+    "ARY News Urdu": "https://urdu.arynews.tv/feed",
+    "Reviewit.pk": "https://reviewit.pk/drama-reviews/feed/"
   },
   "Music": {
     "PakShowbiz": "https://www.pakshowbiz.com/feed"

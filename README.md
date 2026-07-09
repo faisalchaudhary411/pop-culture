@@ -1,91 +1,109 @@
-# Urdu Pop Culture — Static Site (SEO-friendly version)
+# Urdu Pop Culture — Static Site
 
-Plain HTML/CSS. No Streamlit, no client-side framework, nothing for Google
-to wait around for — every page is fully-formed HTML the moment it loads.
+Plain HTML/CSS. No Streamlit, no client-side framework — every page is
+fully-formed HTML the moment it loads, which is what makes it SEO-friendly
+and fast.
 
-## How it works
+## Files
 
-1. `generate.py` reads `feeds.json`, fetches each RSS feed, and writes plain
-   `.html` files into `docs/` (`index.html`, `movies.html`, `drama.html`,
-   `music.html`), plus `style.css`, `sitemap.xml`, and `robots.txt`.
-2. A GitHub Action (`.github/workflows/rebuild.yml`) runs `generate.py`
-   automatically every 2 hours, and commits the refreshed `docs/` folder.
-   You never need to run anything yourself from a PC.
-3. GitHub Pages serves the `docs/` folder as your live site, and you point
-   Cloudflare at it exactly like you did for FileDesk.
+- `generate.py` — the build script. Reads feeds + your own posts/pages,
+  writes plain `.html` into `docs/`.
+- `feeds.json` — RSS sources per category. Edit this to add/remove sources.
+- `originals/*.md` — **your own** blog posts (see below).
+- `pages/*.md` — static pages: About, Contact, Privacy Policy, Terms.
+- `requirements.txt` — pinned dependencies (`feedparser` for RSS, `markdown`
+  for converting your `.md` posts/pages to HTML).
+- `.github/workflows/rebuild.yml` — runs `generate.py` every 2 hours and
+  commits the result automatically.
 
-## One-time setup (all from your phone, GitHub web editor)
+## Writing an Originals post
 
-1. Create a new GitHub repo, upload these files, keeping the folder
-   structure: `generate.py`, `feeds.json`, `.github/workflows/rebuild.yml`.
-2. Open `generate.py` and change `SITE_URL = "https://example.com"` at the
-   top to your real domain (e.g. `https://urdu.yourdomain.com`) — this feeds
-   into canonical tags and the sitemap, both of which matter for SEO.
-3. In repo Settings → Pages, set Source to "Deploy from a branch", branch
-   `main`, folder `/docs`.
-4. In repo Settings → Actions → General, under "Workflow permissions",
-   select "Read and write permissions" — the Action needs this to commit
-   the generated files back.
-5. Go to the Actions tab and manually run "Rebuild site" once (via
-   "Run workflow") to generate the first version of `docs/`.
-6. Add your Cloudflare CNAME pointing at `<username>.github.io`, same
-   pattern as `tools.voxcraft.site`.
+Create a new file in `originals/`, named with simple lowercase-and-hyphens
+(e.g. `originals/ikka-review.md` — no spaces, no Urdu in the filename
+itself, only in the content). Format:
 
-After that, it updates itself every 2 hours with no further action from you.
+```
+---
+title: آپ کی سرخی یہاں
+date: 2026-07-10
+category: Drama
+excerpt: ایک یا دو جملوں میں مختصر تعارف — یہ سرچ رزلٹ اور کارڈ پر نظر آئے گا۔
+image: https://example.com/your-photo.jpg
+---
 
-## Editing content sources
+یہاں سے آپ کا مضمون شروع ہوتا ہے، عام مارک ڈاؤن میں۔ ## سے ذیلی عنوان،
+**لفظ** سے بولڈ، [متن](لنک) سے لنک وغیرہ۔
+```
 
-Edit `feeds.json` only — never hand-edit anything inside `docs/`, since
-the next scheduled run overwrites it. Each edit to `feeds.json` also
-triggers an immediate rebuild (see the `push` trigger in the workflow).
+- `category` must be one of `Movies`, `Drama`, `Music`, or `Opinion` — this
+  sets the color/icon badge.
+- `image` is optional — leave it blank and the tile gets a colored gradient
+  instead of a blank space.
+- The filename becomes the URL: `ikka-review.md` → `ikka-review.html`.
 
-## Verifying feed URLs
+Every post you add here is picked up automatically on the next rebuild and
+shows up on the new **Originals** tab. This is the part of the site most
+worth investing time in — it's the only genuinely original content Google
+has reason to rank you for; the aggregated pages are supporting material
+around it, not the other way round.
 
-I confirmed these feed URLs exist from search results, but couldn't
-live-fetch them from this sandbox (no internet access to news sites here) —
-open each once in a browser to confirm you get raw XML back, not a 404:
-- `https://www.pakshowbiz.com/feed`
-- `https://www.bollywoodhungama.com/feed`
-- `https://urdu.arynews.tv/feed`
+## Static pages
 
-If one is dead, swap it out in `feeds.json` — most sites expose a feed at
-`/feed` or `/rss.xml`, or search "[site name] RSS feed feedspot" to find one.
+`pages/about.md`, `contact.md`, `privacy.md`, `terms.md` are already
+written with reasonable starting content — **but you need to personalize
+them**, especially:
+- `contact.md` — replace the placeholder email with a real one you check
+- `about.md` — replace with your own "why this site exists" text
+- `privacy.md` — update the ads/cookies section truthfully once you add
+  Adsterra, AdSense, or any analytics — this is a genuine AdSense
+  requirement, not just formality
+
+These four are linked in the footer on every page (not the top nav, to keep
+the main navigation focused on content).
+
+## New RSS source
+
+Added **Reviewit.pk** (`reviewit.pk/drama-reviews/feed/`) to the Drama
+category — it's Pakistan's dedicated drama review site, a strong niche fit.
+I checked a couple of other candidates (Koimoi, Brandsynario) but couldn't
+confirm working feed URLs for them, so I left them out rather than add
+something likely to break silently.
+
+## Deploy / update (same as before)
+
+1. Upload/update files in your GitHub repo, keeping the folder structure
+   (`originals/`, `pages/`, `.github/workflows/rebuild.yml` all matter).
+2. If this is a fresh setup: Settings → Actions → General → "Read and write
+   permissions", then Settings → Pages → Deploy from branch `main`, folder
+   `/docs`.
+3. Actions tab → "Rebuild site" → Run workflow (manual trigger), wait ~30s.
+4. Open `generate.py` and set `SITE_URL` to your real domain if you haven't.
 
 ## Design
 
-A glossy, image-forward "showbiz magazine" look, not a text-heavy news list:
+A glossy, image-forward "showbiz magazine" look:
 
-- **Poster-tile grid** — every story is a big image tile (4:3), title
-  overlaid directly on the photo with a dark gradient scrim underneath it,
-  the way Netflix/streaming tiles or movie posters work. No summary
-  paragraph clutters the grid — just image, title, category chip, source,
-  and time.
-- **Fixed image extraction** — most Pakistani entertainment sites run on
-  WordPress and only embed their photo inside the article's full content
-  (`content:encoded`), not the `media:thumbnail` tag most RSS readers check.
-  `generate.py` now also scans `content:encoded` and the summary HTML for
-  the first `<img>` tag, so far more articles get a real photo.
-- **Vibrant fallback** — on the rare article with no image at all, the tile
-  fills with a bold category-colored gradient (pink for Movies, violet for
-  Drama, teal for Music) instead of going blank, so the grid never looks
-  empty or grey.
-- **"Now Showing" hero + 🔥 ٹرینڈنگ ribbon** for the latest story, and a
-  scrolling breaking-news ticker under the nav.
+- **Poster-tile grid** — image-led tiles (4:3), title overlaid on the photo
+  with a gradient scrim, no summary clutter in the grid itself.
+- **Fixed image extraction** — most Pakistani entertainment sites are
+  WordPress-based and only embed their photo inside `content:encoded`, not
+  the `media:thumbnail` tag most readers check. `generate.py` scans there
+  too, plus the summary HTML, for the first real `<img>`.
+- **Vibrant fallback** — no-image articles get a bold category-colored
+  gradient (pink/violet/teal) instead of a blank tile.
+- **"Now Showing" hero + 🔥 ٹرینڈنگ ribbon** for the latest story, plus a
+  scrolling ticker under the nav.
+- **Originals get the same visual treatment** as aggregated news, badged
+  "اوریجنل" in gold so they're clearly distinguished as house content.
 
-Still zero JavaScript required for content — everything here is plain HTML
+Zero JavaScript required for any of this — everything is plain HTML
 background-images and CSS gradients, so none of it costs SEO or load time.
 
-## Why this is better for SEO/speed than the Streamlit version
+## On "full articles"
 
-- Streamlit ships a full Python-in-the-browser app shell before any content
-  appears — slow first paint, and Google's crawler often sees an empty
-  `<div id="root">` rather than your actual headlines.
-- This version is server-generated ahead of time: the HTML Google (and the
-  visitor) receives already contains every headline, image, and link.
-- `sitemap.xml` + `robots.txt` are generated automatically so search engines
-  can discover all four pages immediately.
-
-## Monetization later
-
-Same advice as before — if you add Adsterra, keep it to one contained
-banner `<div>` in the template rather than Social Bar/popup scripts.
+I didn't reproduce full article text from the RSS sources — copying their
+articles wholesale would be copyright infringement, and Google actively
+penalizes duplicate/scraped content, which works directly against the SEO
+goal. The Originals section is the legitimate way to get full-length,
+ownable content on the site: write it yourself, and it accrues to your
+site's authority instead of a takedown risk.

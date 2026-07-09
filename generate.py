@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import feedparser
+import markdown as md_lib
 
 SITE_NAME = "اردو تفریح"
 SITE_NAME_EN = "Urdu Pop Culture"
@@ -24,6 +25,8 @@ SITE_TAGLINE = "فلم، ڈرامہ اور موسیقی کی تازہ ترین �
 SITE_DESCRIPTION = "Latest Urdu & Pakistani entertainment news: movies, drama and music, aggregated from verified sources."
 OUT_DIR = Path(__file__).parent / "docs"
 FEEDS_FILE = Path(__file__).parent / "feeds.json"
+ORIGINALS_DIR = Path(__file__).parent / "originals"
+PAGES_DIR = Path(__file__).parent / "pages"
 MAX_ITEMS_PER_CATEGORY = 40
 BREAKING_HOURS = 3
 TRENDING_HOURS = 8
@@ -37,6 +40,8 @@ CATEGORY_META = {
                "gradient": "linear-gradient(135deg,#9b5de5,#4d2a8c)"},
     "Music":  {"urdu": "موسیقی", "color": "#2de1c2", "icon": "🎵",
                "gradient": "linear-gradient(135deg,#2de1c2,#1b7d8c)"},
+    "Opinion": {"urdu": "رائے", "color": "#ffc94d", "icon": "✍️",
+                "gradient": "linear-gradient(135deg,#ffc94d,#ff7a3d)"},
 }
 DEFAULT_META = {"urdu": "خبر", "color": "#ffc94d", "icon": "★",
                 "gradient": "linear-gradient(135deg,#ffc94d,#ff7a3d)"}
@@ -207,6 +212,7 @@ NAV_ITEMS = [
     ("movies.html", "فلمیں", "Movies"),
     ("drama.html", "ڈرامہ", "Drama"),
     ("music.html", "موسیقی", "Music"),
+    ("originals.html", "اوریجنلز", "Originals"),
 ]
 
 
@@ -224,6 +230,24 @@ def render_ticker(headlines):
         for h in headlines
     )
     return f'<div class="ticker"><span class="ticker-label">تازہ ترین</span><div class="ticker-track">{items}{items}</div></div>'
+
+
+FOOTER_LINKS = [
+    ("about.html", "ہمارے بارے میں"),
+    ("contact.html", "رابطہ"),
+    ("privacy.html", "پرائیویسی پالیسی"),
+    ("terms.html", "شرائط و ضوابط"),
+]
+
+
+def render_footer(updated):
+    links = " · ".join(f'<a href="{href}">{label}</a>' for href, label in FOOTER_LINKS)
+    return f"""<footer>
+  <p class="footer-links">{links}</p>
+  <p>مواد اصل ذرائع کے پبلک RSS فیڈز سے اکٹھا کیا گیا ہے۔</p>
+  <p class="footer-en">Content aggregated from public RSS feeds of original publishers. Headlines link to source; full articles are not reproduced.</p>
+  <p class="updated">Last updated: {updated}</p>
+</footer>"""
 
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
@@ -254,13 +278,191 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 {tiles}
 </div>
 </main>
-<footer>
-  <p>مواد اصل ذرائع کے پبلک RSS فیڈز سے اکٹھا کیا گیا ہے۔</p>
-  <p class="footer-en">Content aggregated from public RSS feeds of original publishers. Headlines link to source; full articles are not reproduced.</p>
-  <p class="updated">Last updated: {updated}</p>
-</footer>
+{footer}
 </body>
 </html>"""
+
+
+ARTICLE_TEMPLATE = """<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{page_title}</title>
+<meta name="description" content="{page_description}">
+<link rel="canonical" href="{canonical}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{page_title}">
+<meta property="og:description" content="{page_description}">
+<meta property="og:url" content="{canonical}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <h1 class="brand"><a href="index.html">{site_name}<span class="brand-en">{site_name_en}</span></a></h1>
+  <p class="tagline">{tagline}</p>
+  <nav class="tabs">{nav}</nav>
+</header>
+<main>
+<article class="post">
+{banner}
+<div class="post-body prose">
+{meta}
+<h1>{title}</h1>
+{content}
+</div>
+</article>
+</main>
+{footer}
+</body>
+</html>"""
+
+
+def parse_frontmatter(text):
+    """Very small frontmatter parser: everything between the first two `---`
+    lines is treated as simple `key: value` pairs (split on the FIRST colon
+    only, so values containing URLs with colons still work); everything
+    after the second `---` is the markdown body."""
+    m = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)$", text, re.DOTALL)
+    if not m:
+        return {}, text
+    front_raw, body = m.groups()
+    meta = {}
+    for line in front_raw.splitlines():
+        if ":" in line:
+            key, _, val = line.partition(":")
+            meta[key.strip()] = val.strip()
+    return meta, body
+
+
+def render_original_tile(post):
+    meta = CATEGORY_META.get(post["category"], CATEGORY_META["Opinion"])
+    if post["image"]:
+        img_style = f'style="background-image:url(\'{post["image"]}\')"'
+        img_class = "tile-media"
+    else:
+        img_style = f'style="background-image:{meta["gradient"]}"'
+        img_class = "tile-media tile-media-fallback"
+    icon_center = f'<span class="tile-icon">{meta["icon"]}</span>' if not post["image"] else ""
+    date_str = post["date"].strftime("%d %b %Y") if post["date"] else ""
+    return f"""
+    <article class="tile">
+      <a class="tile-link" href="{post['slug']}.html">
+        <div class="{img_class}" {img_style}>
+          {icon_center}
+          <div class="tile-scrim">
+            <span class="chip chip-sm" style="--c:{meta['color']}">{meta['icon']} {meta['urdu']}</span>
+            <span class="badge-original">اوریجنل</span>
+            <h2 class="tile-title">{post['title']}</h2>
+          </div>
+        </div>
+      </a>
+      <div class="tile-footer">
+        <span class="tile-source">اردو تفریح</span>
+        <span class="tile-dot">•</span>
+        <span class="tile-time">{date_str}</span>
+      </div>
+    </article>"""
+
+
+def build_originals(nav_html, ticker_html, updated):
+    """Reads originals/*.md, writes one .html per post plus originals.html
+    (an index of all posts using the same tile design as the RSS grid)."""
+    posts = []
+    if ORIGINALS_DIR.exists():
+        for md_path in sorted(ORIGINALS_DIR.glob("*.md")):
+            raw = md_path.read_text(encoding="utf-8")
+            fm, body = parse_frontmatter(raw)
+            date_obj = None
+            if fm.get("date"):
+                try:
+                    date_obj = datetime.strptime(fm["date"].strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+            posts.append({
+                "slug": md_path.stem,
+                "title": fm.get("title", md_path.stem),
+                "category": fm.get("category", "Opinion").strip(),
+                "excerpt": fm.get("excerpt", ""),
+                "image": fm.get("image", "").strip() or None,
+                "date": date_obj,
+                "body_html": md_lib.markdown(body.strip(), extensions=["extra"]),
+            })
+    posts.sort(key=lambda p: p["date"] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+
+    # Individual post pages
+    for post in posts:
+        meta = CATEGORY_META.get(post["category"], CATEGORY_META["Opinion"])
+        banner = ""
+        if post["image"]:
+            banner = f'<div class="post-banner" style="background-image:url(\'{post["image"]}\')"></div>'
+        date_str = post["date"].strftime("%d %b %Y") if post["date"] else ""
+        meta_line = f'<div class="post-meta"><span class="chip chip-sm" style="--c:{meta["color"]}">{meta["icon"]} {meta["urdu"]}</span> <span class="badge-original">اوریجنل</span> <span class="post-date">{date_str}</span></div>'
+        page = ARTICLE_TEMPLATE.format(
+            page_title=f"{post['title']} — {SITE_NAME}",
+            page_description=post["excerpt"] or SITE_DESCRIPTION,
+            canonical=f"{SITE_URL}/{post['slug']}.html",
+            site_name=SITE_NAME,
+            site_name_en=SITE_NAME_EN,
+            tagline=SITE_TAGLINE,
+            nav=nav_html,
+            banner=banner,
+            meta=meta_line,
+            title=post["title"],
+            content=post["body_html"],
+            footer=render_footer(updated),
+        )
+        (OUT_DIR / f"{post['slug']}.html").write_text(page, encoding="utf-8")
+        print(f"  wrote {post['slug']}.html (original post)")
+
+    # Originals index
+    tiles_html = "\n".join(render_original_tile(p) for p in posts) or \
+        '<p class="empty">ابھی تک کوئی اوریجنل تحریر شائع نہیں ہوئی۔</p>'
+    page = PAGE_TEMPLATE.format(
+        page_title=f"اوریجنلز — {SITE_NAME} | {SITE_NAME_EN}",
+        page_description=f"Original writing and opinion pieces: {SITE_DESCRIPTION}",
+        canonical=f"{SITE_URL}/originals.html",
+        site_name=SITE_NAME,
+        site_name_en=SITE_NAME_EN,
+        tagline=SITE_TAGLINE,
+        nav=nav_html,
+        ticker="",
+        hero="",
+        tiles=tiles_html,
+        footer=render_footer(updated),
+    )
+    (OUT_DIR / "originals.html").write_text(page, encoding="utf-8")
+    print(f"  wrote originals.html ({len(posts)} posts)")
+
+
+def build_pages(nav_html, updated):
+    """Reads pages/*.md (about, contact, privacy, terms) and writes matching
+    .html files — simple prose pages, no category/image/date chrome."""
+    if not PAGES_DIR.exists():
+        return
+    for md_path in sorted(PAGES_DIR.glob("*.md")):
+        raw = md_path.read_text(encoding="utf-8")
+        fm, body = parse_frontmatter(raw)
+        title = fm.get("title", md_path.stem)
+        body_html = md_lib.markdown(body.strip(), extensions=["extra"])
+        slug = md_path.stem
+        page = ARTICLE_TEMPLATE.format(
+            page_title=f"{title} — {SITE_NAME}",
+            page_description=SITE_DESCRIPTION,
+            canonical=f"{SITE_URL}/{slug}.html",
+            site_name=SITE_NAME,
+            site_name_en=SITE_NAME_EN,
+            tagline=SITE_TAGLINE,
+            nav=nav_html,
+            banner="",
+            meta="",
+            title=title,
+            content=body_html,
+            footer=render_footer(updated),
+        )
+        (OUT_DIR / f"{slug}.html").write_text(page, encoding="utf-8")
+        print(f"  wrote {slug}.html (static page)")
 
 
 def build():
@@ -311,13 +513,25 @@ def build():
             ticker=ticker_html,
             hero=hero_html,
             tiles=tiles_html,
-            updated=updated,
+            footer=render_footer(updated),
         )
         (OUT_DIR / fname).write_text(page, encoding="utf-8")
         print(f"  wrote {fname} ({len(items)} items)")
 
+    print("Originals:")
+    build_originals(render_nav("originals.html"), "", updated)
+
+    print("Static pages:")
+    build_pages(render_nav(""), updated)
+
+    all_filenames = list(pages.keys()) + ["originals.html"]
+    if PAGES_DIR.exists():
+        all_filenames += [f"{p.stem}.html" for p in PAGES_DIR.glob("*.md")]
+    if ORIGINALS_DIR.exists():
+        all_filenames += [f"{p.stem}.html" for p in ORIGINALS_DIR.glob("*.md")]
+
     write_static_assets()
-    write_sitemap(pages.keys())
+    write_sitemap(all_filenames)
     print("Done.")
 
 
@@ -562,6 +776,48 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 1rem 2rem; }
 .empty span { display: block; font-family: 'Archivo', sans-serif; font-size: 0.8rem; margin-top: 0.5rem; }
 
 footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 2.5rem 1rem; border-top: 1px solid var(--hairline); margin-top: 1rem; }
+.footer-links {
+  font-family: 'Archivo', sans-serif;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+.footer-links a { text-decoration: none; color: var(--text); margin: 0 0.4rem; }
+.footer-links a:hover { color: var(--pink); }
+.badge-original {
+  display: inline-block;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 0.6rem;
+  background: var(--gold);
+  color: #2a1400;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+}
+
+/* ---------- Article / static pages ---------- */
+.post { max-width: 760px; margin: 1.5rem auto 0; padding: 0 1rem; }
+.post-banner {
+  aspect-ratio: 16/9;
+  background-size: cover;
+  background-position: center;
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
+}
+.post-meta { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; font-family: 'Archivo', sans-serif; }
+.post-date { font-size: 0.78rem; color: var(--muted); }
+.prose h1 { font-size: 1.9rem; line-height: 1.8; margin: 0 0 1.2rem; }
+.prose h2 { font-size: 1.4rem; line-height: 1.8; margin: 1.8rem 0 0.8rem; color: var(--gold); }
+.prose h3 { font-size: 1.15rem; margin: 1.4rem 0 0.6rem; }
+.prose p { line-height: 2.1; font-size: 1.05rem; color: #e6d9f7; margin: 0 0 1.1rem; }
+.prose ul, .prose ol { line-height: 2.1; font-size: 1.05rem; color: #e6d9f7; padding-inline-start: 1.5rem; margin: 0 0 1.1rem; }
+.prose a { color: var(--pink); }
+.prose img { max-width: 100%; border-radius: 10px; margin: 1rem 0; }
+.prose blockquote {
+  border-inline-start: 3px solid var(--violet);
+  margin: 1.2rem 0;
+  padding: 0.3rem 1.2rem;
+  color: var(--muted);
+}
+.prose code { background: var(--surface); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; direction: ltr; display: inline-block; }
 .footer-en { font-family: 'Archivo', sans-serif; font-size: 0.75rem; direction: ltr; }
 .updated { font-family: 'Archivo', sans-serif; font-size: 0.7rem; opacity: 0.7; }
 
