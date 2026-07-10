@@ -565,7 +565,7 @@ CSS = """
 }
 
 * { box-sizing: border-box; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
 
 body {
   margin: 0;
