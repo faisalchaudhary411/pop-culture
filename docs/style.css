@@ -110,6 +110,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-
 .ticker-track {
   display: inline-block;
   flex-shrink: 0;
+  width: max-content;
   padding: 0.55rem 0;
   animation: scroll-rtl 40s linear infinite;
   font-family: 'Archivo', sans-serif;
