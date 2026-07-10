@@ -229,7 +229,7 @@ def render_ticker(headlines):
         f'<a href="{h["link"]}" target="_blank" rel="noopener nofollow">{h["title"]}</a><span class="dot">●</span>'
         for h in headlines
     )
-    return f'<div class="ticker"><span class="ticker-label">تازہ ترین</span><div class="ticker-track">{items}{items}</div></div>'
+    return f'<div class="ticker"><span class="ticker-label">تازہ ترین</span><div class="ticker-viewport"><div class="ticker-track">{items}{items}</div></div></div>'
 
 
 FOOTER_LINKS = [
@@ -656,6 +656,11 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255,201,77,0.6); }
   50% { box-shadow: 0 0 0 6px rgba(255,201,77,0); }
+}
+.ticker-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .ticker-track {
   display: inline-block;
